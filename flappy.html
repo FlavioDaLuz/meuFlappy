@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy-Bird</title>
+
+
+</head>
+<style>
+    @font-face {
+        font-family: 'Oswald';
+        src: url('/dom/fonts/Oswald-Regular.ttf') format('truetype');
+    }
+
+    body {
+        background-color: #0D262D;
+    }
+
+    .fundo {
+        color: rgb(131, 0, 0);
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+    }
+
+    .tela {
+        background-color: rgb(255, 255, 255);
+        position: relative;
+        height: 700px;
+        width: 1200px;
+        border: solid 5px rgb(0, 117, 189);
+        overflow: hidden;
+    }
+
+    .passaro {
+        position: absolute;
+        width: 50px;
+        left: calc(50% - 30px);
+
+
+    }
+
+    .par-de-barreiras {
+        position: absolute;
+        display: flex;
+        justify-content: space-between;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .barreira {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+
+    }
+
+
+    .borda {
+        width: 130px;
+        height: 30px;
+        background: linear-gradient(90deg, #639301, #A5E82E);
+        /* background: linear-gradient(to right, #00ac25, #40e300); */
+        border: solid black 2px;
+    }
+
+    .corpo {
+        background: linear-gradient(90deg, #639301, #A5E82E);
+        /* background: linear-gradient(to right, #FFC0CB, #FF69B4); */
+        height: 150px;
+        width: 110px;
+        border-left: 2px solid black;
+        border-right: 2px solid black;
+    }
+
+    .progresso {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-family: Pixel;
+        font-size: 60px;
+        z-index: 100;
+        color: black;
+    }
+
+    @font-face {
+        font-family: 'Pixel';
+        src: url('../dom/fonts/Pixel.ttf');
+    }
+
+    .botao {
+        font-family: 'Pixel';
+        font-size: 50px;
+        /* background-image: linear-gradient(to right,rgb(253, 36, 170),rgb(236, 182, 2 31)); */
+        background: linear-gradient(90deg, #639301, #A5E82E);
+        border: solid 5px white;
+        position: absolute;
+        top: 300px;
+        left: 460px;
+        z-index: 100;
+        box-shadow: 1px 4px 1px 5px rgb(0, 0, 0);
+        display: none;
+        /* display: block; */
+
+    }
+
+    .botao:active {
+        box-shadow: none;
+    }
+</style>
+
+
+
+
+
+<body class="fundo">
+    <h1>
+        Flappy Bird
+    </h1>
+
+    <div class="tela"></div> </body>
+
+
+
+
+    <script>
+        function novoElemento(tagName, className) {
+            this.elem = document.createElement(tagName)
+            elem.className = className
+            return elem
+        }
+
+        function barreira(reversa = false) {
+            this.elemento = novoElemento('div', 'barreira')
+            const corpo = novoElemento('div', 'corpo')
+            const borda = novoElemento('div', 'borda')
+            this.elemento.appendChild(reversa ? corpo : borda)
+            this.elemento.appendChild(reversa ? borda : corpo)
+
+            this.setAltura = (altura) => corpo.style.height = `${altura}px`
+        }
+
+        function ParDeBarreiras(altura, abertura, x) {
+            this.elemento = novoElemento('div', 'par-de-barreiras')
+            this.superior = new barreira(true)
+            this.inferior = new barreira(false)
+
+            this.elemento.appendChild(this.superior.elemento)
+            this.elemento.appendChild(this.inferior.elemento)
+
+            this.sortearAbertura = () => {
+                const alturaSuperior = Math.random() * (altura - abertura)
+                const alturaInferior = altura - abertura - alturaSuperior
+
+                this.superior.setAltura(alturaSuperior)
+                this.inferior.setAltura(alturaInferior)
+            }
+            this.setX = x => this.elemento.style.left = `${x}px`
+            this.getX = () => parseInt(this.elemento.style.left.split('px')[0])
+            this.getLargura = () => this.elemento.clientWidth
+
+            this.sortearAbertura()
+            this.setX(x)
+        }
+
+        function Barreiras(altura, largura, abertura, espaço, notificarPonto) {
+            this.pares = [
+                new ParDeBarreiras(altura, abertura, largura),
+                new ParDeBarreiras(altura, abertura, largura + espaço),
+                new ParDeBarreiras(altura, abertura, largura + espaço * 2),
+                new ParDeBarreiras(altura, abertura, largura + espaço * 3)
+            ]
+            const deslocamento = 4
+            this.animar = () => {
+                this.pares.forEach(par => {
+                    par.setX(par.getX() - deslocamento)
+
+                    if (par.getX() < -par.getLargura()) {
+                        par.setX(par.getX() + espaço * this.pares.length)
+                        par.sortearAbertura()
+                    }
+                    const meio = largura / 2
+                    const cruzouMeio = par.getX() + deslocamento >= meio
+                        && par.getX() < meio
+                    if (cruzouMeio) notificarPonto()
+                })
+            }
+        }
+        function Passaro(alturaJogo) {
+            let voando = false
+            this.elemento = novoElemento('img', 'passaro')
+            this.elemento.src = "/dom/imgs/barbie.png"
+
+            this.getY = () => parseInt(this.elemento.style.bottom.split('px')[0])
+            this.setY = y => this.elemento.style.bottom = y + 'px'
+
+            window.onkeydown = e => voando = true
+            window.onkeyup = e => voando = false
+
+            // window.onclick = e => voando = true 
+
+            // if (!window.onclick){
+            //     voando = false
+            // }
+
+
+            this.animar = () => {
+                const novoY = this.getY() + (voando ? 8 : -5)
+                const alturaMaxima = alturaJogo - this.elemento.clientHeight
+
+                if (novoY <= 0) {
+                    this.setY(0)
+                } else if (novoY >= alturaMaxima) {
+                    this.setY(alturaMaxima)
+                } else {
+                    this.setY(novoY)
+                }
+            }
+            this.setY(alturaJogo / 2)
+        }
+        function Progresso() {
+            this.elemento = novoElemento('span', 'progresso')
+            this.atualizarPontos = pontos => {
+                this.elemento.innerHTML = pontos
+            }
+            this.atualizarPontos('0')
+        }
+        function EstaoSobrePostos(elementoA, elementoB) {
+            const a = elementoA.getBoundingClientRect()
+            const b = elementoB.getBoundingClientRect()
+            const horizontal = a.left + a.width >= b.left
+                && b.left + b.width >= a.left
+            const vertical = a.top + a.height >= b.top
+                && b.top + b.height >= a.top
+            return horizontal && vertical
+        }
+
+        function colidiu(passaro, barreiras) {
+            let colidiu = false
+            barreiras.pares.forEach(parDeBarreiras => {
+                if (!colidiu) {
+                    const superior = parDeBarreiras.superior.elemento
+                    const inferior = parDeBarreiras.inferior.elemento
+                    colidiu = EstaoSobrePostos(passaro.elemento, superior)
+                        || EstaoSobrePostos(passaro.elemento, inferior)
+                }
+            })
+            return colidiu
+        }
+
+        function limparTela() {
+            const tela = document.querySelector('.tela');
+            while (tela.firstChild) {
+                tela.removeChild(tela.firstChild);
+            }
+        }
+        function Flappybird() {
+            let pontos = 0
+            const tela = document.querySelector('.tela')
+            const altura = tela.clientHeight
+            const largura = tela.clientWidth
+            const progresso = new Progresso()
+            const barreiras = new Barreiras(altura, largura, 230, 400, () => {
+                progresso.atualizarPontos(++pontos)
+            })
+            const passaro = new Passaro(altura)
+            tela.appendChild(passaro.elemento)
+            tela.appendChild(progresso.elemento)
+            barreiras.pares.forEach(par =>
+                tela.appendChild(par.elemento))
+
+            const botao = new Botao()
+
+            this.start = () => {
+                const temporizador = setInterval(() => {
+                    barreiras.animar()
+                    passaro.animar()
+
+                    if (colidiu(passaro, barreiras)) {
+                        clearInterval(temporizador)
+                        // limparTela()
+                       
+                        window.addEventListener('keydown', (event) => {
+                           
+                            if (event.key === 'R' || event.key === 'r') {
+                                limparTela();
+                                new Flappybird().start();
+                                a.sumir()
+                            }
+                        });
+
+
+
+                    } else {
+                        const botao = document.querySelector('.botao')
+                        if (botao) {
+                            botao.style.display = 'none'
+                        }
+                    }
+                }, 20)
+            }
+        }
+
+        // const botao = novoElemento('button','botao')
+        // botao.innerHTML = 'press start'
+        // document.querySelector('.tela').appendChild(botao)
+
+function BotaoReeniciar(){
+    this.elemento = document.createElement('button')
+            this.elemento.className = 'botao'
+            this.elemento.innerHTML = 'Press R button'
+            this.sumir = function () {
+                this.elemento.style.display = 'none'
+            }
+            this.aparecer = function () {
+                this.elemento.style.display = 'block'
+            }
+            this.piscar = function () {
+                const self = this;
+                this.sumir();
+                setTimeout(function () {
+                    self.aparecer();
+                }, 500);
+
+                const piscarInterval = setInterval(function () {
+                    self.sumir();
+                    setTimeout(function () {
+                        self.aparecer();
+
+                    }, 500);
+                }, 1000);
+                window.addEventListener('keydown', function () {
+                    clearInterval(piscarInterval);
+                    window.removeEventListener('keydown', arguments.callee);
+                });
+}}
+
+        function Botao() {
+            this.elemento = document.createElement('button')
+            this.elemento.className = 'botao'
+            this.elemento.innerHTML = 'Press Start'
+            this.sumir = function () {
+                this.elemento.style.display = 'none'
+            }
+            this.aparecer = function () {
+                this.elemento.style.display = 'block'
+            }
+            this.piscar = function () {
+                const self = this;
+                this.sumir();
+                setTimeout(function () {
+                    self.aparecer();
+                }, 500);
+
+                const piscarInterval = setInterval(function () {
+                    self.sumir();
+                    setTimeout(function () {
+                        self.aparecer();
+
+                    }, 500);
+                }, 1000);
+                window.addEventListener('keydown', function () {
+                    clearInterval(piscarInterval);
+                    new Flappybird().start();
+                    window.removeEventListener('keydown', arguments.callee);
+                });
+
+            }
+        }
+
+
+
+
+
+        const a = new Botao()
+        document.querySelector('.tela').appendChild(a.elemento)
+        a.piscar()
+// new Flappybird().start()
+
+
+
+
+    </script>
+</body>
+
+</html>
